@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
+import pandas as pd
+import numpy as np
+cont_glu_data =pd.read_csv('CGMData.csv',low_memory=False)
+ins_data=pd.read_csv('InsulinData.csv',low_memory=False)
+
+cont_glu_data['dtstamp']=pd.to_datetime(cont_glu_data['Date'] + ' ' + cont_glu_data['Time'])
+date_removal=cont_glu_data[cont_glu_data['Sensor Glucose (mg/dL)'].isna()]['Date'].unique()
+cont_glu_data=cont_glu_data.set_index('Date').drop(index=date_removal).reset_index()
+cont_glu_test=cont_glu_data.copy()
+cont_glu_test=cont_glu_test.set_index(pd.DatetimeIndex(cont_glu_data['dtstamp']))
+ins_data['dtstamp']=pd.to_datetime(ins_data['Date'] + ' ' + ins_data['Time'])
+auto_mode_strt=ins_data.sort_values(by='dtstamp',ascending=True).loc[ins_data['Alarm']=='AUTO MODE ACTIVE PLGM OFF'].iloc[0]['dtstamp']
+autodataframe=cont_glu_data.sort_values(by='dtstamp',ascending=True).loc[cont_glu_data['dtstamp']>=auto_mode_strt]
+manualdataframe=cont_glu_data.sort_values(by='dtstamp',ascending=True).loc[cont_glu_data['dtstamp']<auto_mode_strt]
+adate_index=autodataframe.copy()
+adate_index=adate_index.set_index('dtstamp')
+list1=adate_index.groupby('Date')['Sensor Glucose (mg/dL)'].count().where(lambda x:x>0.8*288).dropna().index.tolist()
+adate_index=adate_index.loc[adate_index['Date'].isin(list1)]
+percent_time_in_hyperglycemia_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(adate_index['Sensor Glucose (mg/dL)']>=70) & (adate_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_wholeday_automode=(adate_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_daytime_automode=(adate_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_overnight_automode=(adate_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[adate_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+mdata_index=manualdataframe.copy()
+mdata_index=mdata_index.set_index('dtstamp')
+list2=mdata_index.groupby('Date')['Sensor Glucose (mg/dL)'].count().where(lambda x:x>0.8*288).dropna().index.tolist()
+mdata_index=mdata_index.loc[mdata_index['Date'].isin(list2)]
+percent_time_in_hyperglycemia_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>180].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hyperglycemia_critical_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']>250].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=180)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_range_sec_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[(mdata_index['Sensor Glucose (mg/dL)']>=70) & (mdata_index['Sensor Glucose (mg/dL)']<=150)].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv1_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<70].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_wholeday_manual=(mdata_index.between_time('0:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_daytime_manual=(mdata_index.between_time('6:00:00','23:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+percent_time_in_hypoglycemia_lv2_overnight_manual=(mdata_index.between_time('0:00:00','05:59:59')[['Date','Time','Sensor Glucose (mg/dL)']].loc[mdata_index['Sensor Glucose (mg/dL)']<54].groupby('Date')['Sensor Glucose (mg/dL)'].count()/288*100)
+
+
+results_df = pd.DataFrame({'percent_time_in_hyperglycemia_overnight':[ percent_time_in_hyperglycemia_overnight_manual.mean(axis=0),percent_time_in_hyperglycemia_overnight_automode.mean(axis=0)],'percent_time_in_hyperglycemia_critical_overnight':[ percent_time_in_hyperglycemia_critical_overnight_manual.mean(axis=0),percent_time_in_hyperglycemia_critical_overnight_automode.mean(axis=0)],'percent_time_in_range_overnight':[ percent_time_in_range_overnight_manual.mean(axis=0),percent_time_in_range_overnight_automode.mean(axis=0)],'percent_time_in_range_sec_overnight':[ percent_time_in_range_sec_overnight_manual.mean(axis=0),percent_time_in_range_sec_overnight_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv1_overnight':[ percent_time_in_hypoglycemia_lv1_overnight_manual.mean(axis=0),percent_time_in_hypoglycemia_lv1_overnight_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv2_overnight':[ np.nan_to_num(percent_time_in_hypoglycemia_lv2_overnight_manual.mean(axis=0)),percent_time_in_hypoglycemia_lv2_overnight_automode.mean(axis=0)],'percent_time_in_hyperglycemia_daytime':[ percent_time_in_hyperglycemia_daytime_manual.mean(axis=0),percent_time_in_hyperglycemia_daytime_automode.mean(axis=0)],'percent_time_in_hyperglycemia_critical_daytime':[ percent_time_in_hyperglycemia_critical_daytime_manual.mean(axis=0),percent_time_in_hyperglycemia_critical_daytime_automode.mean(axis=0)],'percent_time_in_range_daytime':[ percent_time_in_range_daytime_manual.mean(axis=0),percent_time_in_range_daytime_automode.mean(axis=0)],'percent_time_in_range_sec_daytime':[ percent_time_in_range_sec_daytime_manual.mean(axis=0),percent_time_in_range_sec_daytime_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv1_daytime':[ percent_time_in_hypoglycemia_lv1_daytime_manual.mean(axis=0),percent_time_in_hypoglycemia_lv1_daytime_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv2_daytime':[ percent_time_in_hypoglycemia_lv2_daytime_manual.mean(axis=0),percent_time_in_hypoglycemia_lv2_daytime_automode.mean(axis=0)],'percent_time_in_hyperglycemia_wholeday':[ percent_time_in_hyperglycemia_wholeday_manual.mean(axis=0),percent_time_in_hyperglycemia_wholeday_automode.mean(axis=0)],'percent_time_in_hyperglycemia_critical_wholeday':[ percent_time_in_hyperglycemia_critical_wholeday_manual.mean(axis=0),percent_time_in_hyperglycemia_critical_wholeday_automode.mean(axis=0)],'percent_time_in_range_wholeday':[ percent_time_in_range_wholeday_manual.mean(axis=0),percent_time_in_range_wholeday_automode.mean(axis=0)],'percent_time_in_range_sec_wholeday':[ percent_time_in_range_sec_wholeday_manual.mean(axis=0),percent_time_in_range_sec_wholeday_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv1_wholeday':[ percent_time_in_hypoglycemia_lv1_wholeday_manual.mean(axis=0),percent_time_in_hypoglycemia_lv1_wholeday_automode.mean(axis=0)],'percent_time_in_hypoglycemia_lv2_wholeday':[ percent_time_in_hypoglycemia_lv2_wholeday_manual.mean(axis=0),percent_time_in_hypoglycemia_lv2_wholeday_automode.mean(axis=0)]},index=['manual_mode','auto_mode'])
+
+results_df.to_csv('Results.csv',header=False,index=False)
+
